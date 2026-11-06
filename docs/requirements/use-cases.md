@@ -1461,7 +1461,8 @@ Details:
 - PRE-2. The course admin or instructor has identified the student whose account is to be deactivated; the selected account need not still be active.
 
 **Postconditions:**
-- POST-1. The student's account is deactivated.
+- POST-1. The student's account is deactivated under BR-student-lifecycle and FR-SEC-active-account.
+- POST-2. Membership, submission obligations, and retained evaluations follow BR-deactivation-team-retention, BR-submission-owed, BR-evaluation-active-evaluatee, and BR-evaluation-report-retention.
 
 **Main Success Scenario:**
 1. The course admin or instructor indicates to deactivate a student.
@@ -1473,6 +1474,12 @@ Details:
 7. Use case ends.
 
 **Extensions:**
+- **2a. The selected student cannot be found:**
+  - 2a1. The system reports that the student is unavailable and makes no change; use case ends.
+  - 2a2. A refusal under extension 1a does not disclose whether an unauthorized target exists.
+- **6b. The deactivation cannot be saved, or its result cannot be confirmed:**
+  - 6b1. A failed transaction leaves the account and submitted work unchanged; the system displays an error without claiming success.
+  - 6b2. If the response is lost after submission, the system reports that the outcome is unknown and requires a fresh account-status read before another attempt.
 - **5a. The course admin or instructor cancels or dismisses the warning:**
   - 5a1. The system closes the warning without submitting a deactivation request.
   - 5a2. The system leaves the account and its submitted work unchanged; use case ends.
