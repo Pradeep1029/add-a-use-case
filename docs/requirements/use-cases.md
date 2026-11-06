@@ -1474,21 +1474,22 @@ Details:
 7. Use case ends.
 
 **Extensions:**
-- **2a. The selected student cannot be found:**
-  - 2a1. The system reports that the student is unavailable and makes no change; use case ends.
-  - 2a2. A refusal under extension 1a does not disclose whether an unauthorized target exists.
-- **6b. The deactivation cannot be saved, or its result cannot be confirmed:**
-  - 6b1. A failed transaction leaves the account and submitted work unchanged; the system displays an error without claiming success.
-  - 6b2. If the response is lost after submission, the system reports that the outcome is unknown and requires a fresh account-status read before another attempt.
-- **5a. The course admin or instructor cancels or dismisses the warning:**
-  - 5a1. The system closes the warning without submitting a deactivation request.
-  - 5a2. The system leaves the account and its submitted work unchanged; use case ends.
 - **1a. The caller is not authorized, or authorization has been lost before step 6:**
   - 1a1. The system refuses the action under BR-student-lifecycle, BR-section-scoped-access, and BR-role-based-access without changing the student or her work.
   - 1a2. Use case ends; being the student herself or an administrator of a different course grants no exception.
+- **2a. The selected student cannot be found:**
+  - 2a1. The system reports that the student is unavailable and makes no change; use case ends.
+  - 2a2. A refusal under extension 1a does not disclose whether an unauthorized target exists.
+- **5a. The course admin or instructor cancels or dismisses the warning:**
+  - 5a1. The system closes the warning without submitting a deactivation request.
+  - 5a2. The system leaves the account and its submitted work unchanged; use case ends.
 - **6a. The selected student is already inactive, including a repeated confirmation:**
   - 6a1. The system reports that the student is already deactivated.
   - 6a2. The system leaves the account, memberships, and submitted work unchanged; use case ends.
+- **6b. The deactivation cannot be saved, or its result cannot be confirmed:**
+  - 6b1. A failed transaction leaves the account and submitted work unchanged; the system displays an error without claiming success.
+  - 6b2. If the response is lost after submission, the system reports that the outcome is unknown and requires a fresh account-status read before another attempt.
+
 **Priority:** Low
 **Frequency of Use:** Rare. Occurs occasionally when a student withdraws from a course section.
 **Business Rules:** BR-student-lifecycle, BR-section-scoped-access, BR-role-based-access, BR-deactivation-team-retention, BR-submission-owed, BR-evaluation-active-evaluatee, BR-evaluation-report-retention
@@ -1534,7 +1535,7 @@ Details:
 **Extensions:**
 **Priority:** Low
 **Frequency of Use:** Rare. Occurs occasionally when a previously withdrawn student returns to a course section.
-**Business Rules:** BR-student-lifecycle, BR-deactivation-team-retention, BR-submission-owed
+**Business Rules:** BR-student-lifecycle, BR-deactivation-team-retention, BR-submission-owed, BR-evaluation-submission-window
 
 **Associated Information:**
 - Membership on reactivation follows BR-deactivation-team-retention; submission obligations are recomputed under BR-submission-owed. Reactivation does not restore a former team assignment or reopen a closed peer evaluation submission window (BR-evaluation-submission-window).
@@ -2213,7 +2214,7 @@ Report generating algorithm: N/A
 **Primary Actor:** student
 **Secondary Actors:**
 **Trigger:** The student indicates to submit a peer evaluation for the previous week.
-**Description:** The student wants to submit a peer evaluation for the previous week, so that she can provide feedback and assessment for every team member.
+**Description:** The student wants to submit a peer evaluation for the previous week, so that she can provide feedback and assessment for every eligible team member.
 
 **Preconditions:**
 - PRE-1. The student is logged into the system.
