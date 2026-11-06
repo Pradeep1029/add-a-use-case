@@ -45,6 +45,8 @@ class StudentServiceTest {
     PasswordEncoder passwordEncoder;
     @Mock
     UserUtils userUtils;
+    @Mock
+    StudentSecurityService studentSecurityService;
 
     @InjectMocks
     private StudentService studentService;
@@ -204,6 +206,45 @@ class StudentServiceTest {
 
         // Then
         verify(this.studentRepository, times(1)).deleteById(1);
+    }
+
+    @Test
+    @org.junit.jupiter.api.Tag("UC-STU-deactivate-student") // T08, extension 1a at service boundary
+    void deactivationRefusesUnauthorizedDirectServiceCallWithoutMutation() {
+        Student target = this.students.get(0);
+        given(studentRepository.findById(1)).willReturn(Optional.of(target));
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> studentService.deactivateStudent(1))
+                .isInstanceOf(org.springframework.security.access.AccessDeniedException.class);
+        assertThat(target.isEnabled()).isTrue();
+        verify(studentRepository, never()).save(any());
+    }
+
+    @Test
+    @org.junit.jupiter.api.Tag("UC-STU-deactivate-student") // T10, missing between guard and service load
+    void deactivationMissingTargetIsNotFoundWithoutSave() {
+        given(studentRepository.findById(999)).willReturn(Optional.empty());
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> studentService.deactivateStudent(999))
+                .isInstanceOf(team.projectpulse.system.exception.ObjectNotFoundException.class);
+        verify(studentRepository, never()).save(any());
+    }
+
+    @Test
+    @org.junit.jupiter.api.Tag("UC-STU-deactivate-student") // T02, T12: only status changes; repeat is a no-op
+    void deactivationChangesOnlyStatusAndRepeatDoesNotSave() {
+        Student target = this.students.get(0);
+        target.setSection(new Section());
+        given(studentRepository.findById(1)).willReturn(Optional.of(target));
+        given(studentSecurityService.isCurrentUserInstructorOfStudentSection(1)).willReturn(true);
+        given(studentRepository.save(target)).willReturn(target);
+        var first = studentService.deactivateStudent(1);
+        assertThat(first.changed()).isTrue();
+        assertThat(first.student()).isSameAs(target);
+        assertThat(target.isEnabled()).isFalse();
+        assertThat(target.getFirstName()).isEqualTo("John");
+        assertThat(target.getEmail()).isEqualTo("j.smith@abc.edu");
+        assertThat(target.getSection()).isNotNull();
+        assertThat(studentService.deactivateStudent(1).changed()).isFalse();
+        verify(studentRepository, times(1)).save(target);
     }
 
 }
