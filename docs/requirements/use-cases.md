@@ -1478,6 +1478,7 @@ Details:
 **Business Rules:** BR-student-lifecycle, BR-deactivation-team-retention, BR-submission-owed, BR-evaluation-active-evaluatee, BR-evaluation-report-retention
 
 **Associated Information:**
+- FR-SEC-active-account applies to an already logged-in student: each protected request authenticated after the deactivation transaction commits checks the current account status, including requests bearing an unexpired token issued before deactivation. The use case does not recall responses already delivered or cancel requests authenticated before that commit.
 - Weekly report inclusion follows BR-evaluation-report-retention; account status does not delete historical work.
 - Peer evaluation entry and later edits follow BR-evaluation-active-evaluatee.
 - Membership and reminder consequences follow BR-deactivation-team-retention and BR-submission-owed.
