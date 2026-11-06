@@ -115,6 +115,7 @@ describe('Student deactivation confirmation', () => {
     cy.get('[data-cy=deactivation-confirm]').click()
     cy.wait('@failedStatus', { timeout: 15000 })
     cy.get('[data-cy=deactivation-result]').should('contain', 'outcome is unknown')
+    cy.get('[data-cy=student-status]').should('contain', 'Unknown')
     cy.get('[data-cy=deactivate-student]').should('be.disabled')
     cy.get('@lost.all').should('have.length', 1)
     cy.intercept('GET', '**/students/4', { body: result(target) }).as('laterStatus')

@@ -14,8 +14,8 @@
       <el-input v-model="studentBeingEdited.username"></el-input>
     </el-form-item>
     <el-form-item label="Status:" prop="enabled">
-      <el-tag data-cy="student-status" :type="studentBeingEdited.enabled ? 'success' : 'danger'">
-        {{ studentBeingEdited.enabled ? 'Active' : 'Inactive' }}
+      <el-tag data-cy="student-status" :type="!statusKnown ? 'info' : studentBeingEdited.enabled ? 'success' : 'danger'">
+        {{ !statusKnown ? 'Unknown' : studentBeingEdited.enabled ? 'Active' : 'Inactive' }}
       </el-tag>
     </el-form-item>
     <el-form-item label="First Name:" prop="firstName">
