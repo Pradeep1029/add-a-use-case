@@ -4,8 +4,10 @@ import team.projectpulse.section.Section;
 import team.projectpulse.team.Team;
 import team.projectpulse.user.PeerEvaluationUser;
 import jakarta.persistence.*;
+import org.hibernate.annotations.DynamicUpdate;
 
 @Entity
+@DynamicUpdate // A managed profile/team update must not flush stale enabled, or vice versa.
 public class Student extends PeerEvaluationUser {
 
     @ManyToOne(optional = false)

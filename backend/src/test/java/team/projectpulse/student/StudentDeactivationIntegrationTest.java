@@ -204,4 +204,60 @@ class StudentDeactivationIntegrationTest extends AbstractIntegrationTest {
         assertThat(submissionStatus.findOwing(2, SubmittableItem.PEER_EVALUATION, "2023-W32")).extracting(Student::getId).doesNotContain(4, 5, 6);
         verify(email, never()).sendReminderEmail(eq("j.moon@abc.edu"), anyString(), anyString());
     }
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(booleans = {true, false})
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    // T20 / FR-SEC-active-account: coordinate real overlapping requests in both commit orders.
+    void concurrentProfileAndDeactivationPreserveBothIntents(boolean pauseProfile) throws Exception {
+        String token = login("b.gates@abc.edu");
+        var before = snapshot(4);
+        var paused = new java.util.concurrent.CountDownLatch(1);
+        var release = new java.util.concurrent.CountDownLatch(1);
+        var executor = java.util.concurrent.Executors.newSingleThreadExecutor(task -> new Thread(task, "paused-student-update"));
+        String profile = "{\"username\":\"j.smith@abc.edu\",\"firstName\":\"Concurrent profile\",\"lastName\":\"Smith\",\"email\":\"j.smith@abc.edu\",\"enabled\":true}";
+        java.util.concurrent.Future<?> request = null;
+        try {
+            doAnswer(invocation -> {
+                if (Thread.currentThread().getName().equals("paused-student-update")) {
+                    paused.countDown();
+                    if (!release.await(15, java.util.concurrent.TimeUnit.SECONDS)) throw new IllegalStateException("Timed out waiting for competing commit");
+                }
+                // Both services loaded a managed entity. save is redundant here; ORM dirty-checking,
+                // flush, commit and all fresh database reads remain real. This spy only coordinates timing.
+                return invocation.getArgument(0);
+            }).when(students).save(argThat(student -> student != null && student.getId().equals(4)));
+            request = executor.submit(() -> {
+                try {
+                    if (pauseProfile) {
+                        mvc.perform(put(API + "/students/4").header(HttpHeaders.AUTHORIZATION, token)
+                                .contentType(MediaType.APPLICATION_JSON).content(profile)).andExpect(status().isOk());
+                    } else {
+                        deactivate(token, 4);
+                    }
+                } catch (Exception exception) { throw new RuntimeException(exception); }
+            });
+            assertThat(paused.await(15, java.util.concurrent.TimeUnit.SECONDS)).as("first request reached save before its commit").isTrue();
+            if (pauseProfile) deactivate(token, 4);
+            else mvc.perform(put(API + "/students/4").header(HttpHeaders.AUTHORIZATION, token)
+                    .contentType(MediaType.APPLICATION_JSON).content(profile)).andExpect(status().isOk());
+            release.countDown();
+            request.get(15, java.util.concurrent.TimeUnit.SECONDS);
+            var after = snapshot(4);
+            assertThat(after.get("user").get(0).get("enabled")).as("a profile write cannot restore access").isEqualTo(false);
+            assertThat(after.get("user").get(0).get("first_name")).as("deactivation cannot overwrite a profile edit").isEqualTo("Concurrent profile");
+            after.get("user").get(0).put("enabled", before.get("user").get(0).get("enabled"));
+            after.get("user").get(0).put("first_name", before.get("user").get(0).get("first_name"));
+            assertThat(after).isEqualTo(before);
+        } finally {
+            release.countDown();
+            if (request != null) {
+                try { request.get(20, java.util.concurrent.TimeUnit.SECONDS); } catch (Exception ignored) { /* preserve primary failure */ }
+            }
+            executor.shutdownNow();
+            reset(students);
+            jdbc.update("update peer_evaluation_user set enabled = ?, first_name = ? where id = 4",
+                    before.get("user").get(0).get("enabled"), before.get("user").get(0).get("first_name"));
+        }
+    }
+
 }
