@@ -174,7 +174,23 @@ class StudentServiceTest {
         assertThat(result.getLastName()).isEqualTo(update.getLastName());
         assertThat(result.getEmail()).isEqualTo(update.getEmail());
 //        assertThat(result.getRoles()).isEqualTo(update.getRoles());
-        assertThat(result.isEnabled()).isEqualTo(update.isEnabled());
+        assertThat(result.isEnabled()).isTrue();
+    }
+
+    @Test
+    @org.junit.jupiter.api.Tag("UC-STU-deactivate-student") // T20, dedicated lifecycle action
+    void staleProfileCannotReactivateStudent() {
+        Student stored = this.students.get(0);
+        stored.setEnabled(false);
+        Student update = new Student("john", "Updated", "Smith", "updated@abc.edu", "", true, "student");
+        given(this.studentRepository.findById(1)).willReturn(Optional.of(stored));
+        given(this.studentRepository.save(stored)).willReturn(stored);
+
+        Student result = this.studentService.updateStudent(1, update);
+
+        assertThat(result.isEnabled()).isFalse();
+        assertThat(result.getFirstName()).isEqualTo("Updated");
+        assertThat(result.getEmail()).isEqualTo("updated@abc.edu");
     }
 
     @Test

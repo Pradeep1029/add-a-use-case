@@ -151,7 +151,7 @@ No tables, columns, migrations, membership deletion, evaluation deletion, or rat
 
 ## **Tests**
 
-These are **planned**, not implemented or passing. Each row names a specification oracle. Backend integration tests use the actual security filter chain and a genuinely signed token obtained before deactivation; Spring's mock JWT postprocessor would bypass the new authentication converter and is insufficient evidence for these rows. UI integration rows may stub APIs and must be described as such.
+These rows are the acceptance plan for the complete use case. Shared-trunk evidence is recorded below; rows without evidence remain planned. Each row names a specification oracle. Backend integration tests use the actual security filter chain and a genuinely signed token obtained before deactivation; Spring's mock JWT postprocessor would bypass the new authentication converter and is insufficient evidence for these rows. UI integration rows may stub APIs and must be described as such.
 
 | Row / flow | Level | Assertion and oracle |
 |---|---|---|
@@ -187,6 +187,23 @@ These are **planned**, not implemented or passing. Each row names a specificatio
 | T30 — shared scope regression | Backend integration | Owning admin and assigned instructor retain detailed peer-evaluation access; unassigned outsiders and students cannot read private comments. Oracle: BR-section-scoped-access and BR-evaluation-private-comment. |
 
 Extensions 1a, 2a, 5a, 6a, and 6b all have rows; Associated Information and new business rules also have explicit rows. Tests for reactivation are out of scope. The eventual trace must name actual implemented test methods and mark any missing row untested; this table alone proves no runtime behavior.
+
+## **Shared trunk evidence**
+
+The local implementation branch contains only stage 1. The deactivation endpoint, its route rule, confirmation flow, and evaluation-entry UI are still pending. No GitHub design merge has occurred. Integration fixture changes to `enabled` do not prove the dedicated action. The complete use case remains **In progress / Partial**.
+
+All new test classes carry `@Tag("UC-STU-deactivate-student")`; individual additions to existing classes identify the relevant row. Test paths below are under `backend/src/test/java/team/projectpulse/`.
+
+| Planned row | Actual test methods | Evidence boundary |
+|---|---|---|
+| T03-T05, T07, T09, T30 | `student/StudentSecurityServiceTest.owningAdminNeedsNoSectionAssignment`, `assignedInstructorPassesButUnassignedAndOtherCourseAdminDoNot`, `studentsCannotAcquireInstructorScopeEvenWithMatchingId`, `unresolvedIdentityTargetAndLinksFailClosed`; `student/StudentDeactivationTrunkIntegrationTest.owningAdminAndAssignedInstructorHaveScopeButOutsidersAndStudentsDoNot` | Existing student details and private-comment routes; target absence/malformed id and removed assignment fail closed. Deactivation authorization remains untested. |
+| T17-T18 | `StudentDeactivationTrunkIntegrationTest.preDeactivationStudentTokenCannotReadOrWriteAndDisabledPasswordCannotLogin` | Real Basic-login JWT, successful initial protected read, separate committed fixture deactivation with no outer test transaction, then 401 for read, WAR create, evaluation create/edit and password login; evaluation count unchanged. Other enabled accounts still log in. No deactivation HTTP action yet. |
+| T19 | `security/ActiveAccountJwtAuthenticationConverterTest.invalidIdentityFailsClosedWithoutDatabaseLookup`, `missingAccountFailsClosed`, `currentStatusIsReadEveryTimeAndAuthoritiesArePreserved`; `StudentDeactivationTrunkIntegrationTest.signedMissingMalformedAndDeletedIdentitiesReceive401`, `preDeactivationInstructorTokenIsRefusedAfterCommit` | Missing/malformed/overflowed identity fails closed; deleted user and inactive instructor refused through actual signed-token filter chain. Instructor fixture status is separately committed and restored. |
+| T20 | `student/StudentServiceTest.testStudentUpdateOwnInfo`, `testInstructorUpdatesStudent`, `staleProfileCannotReactivateStudent`; `StudentDeactivationTrunkIntegrationTest.profilePutPreservesPersistedStatusInBothDirections` | Profile fields remain editable; false cannot deactivate and stale true cannot reactivate. |
+| T23-T24 | `evaluation/EvaluationServiceTest.inactiveEvaluateeCreateIsRefusedWithoutSaving`, `inactiveEvaluateeEditPreservesStoredRatingsAndComments`; `StudentDeactivationTrunkIntegrationTest.inactiveEvaluateeCreateWithoutExistingTupleIsRefused`, `inactiveEvaluateeEditPreservesPersistedEvaluation` | Unit and HTTP refusal name the inactive evaluatee; no new row, exact original ratings, total and comments retained. Integration fixture uses same team and open previous week. |
+| T27-T29 | `EvaluationServiceTest.weeklyReportRetainsInactiveZeroScoreRecipientWithoutTeamAndOmitsEmptyInactiveRows`; `StudentDeactivationTrunkIntegrationTest.weeklyReportRetainsInactiveHistoryAndContributionsAfterTeamRemoval`, `zeroScoreInactiveRecipientIsRetainedAndEmptyInactiveTeammateIsOmitted` | Stored scores/comments and inactive-authored contributions survive an authorized team-removal request. Empty inactive rows omitted by requested week, active teamed rows retained, real zero retained; repository result scoped by recipient course section/week. |
+
+`SubmissionStatusServiceIntegrationTest.testAnEvaluationOfADeactivatedTeammateIsNotRequired` supplies existing BR-submission-owed regression evidence, not full T22 endpoint/reminder proof. T01-T02, T06, T08, T10-T16, T21-T22 and T25-T26 remain unverified as complete rows; the action portions of T03-T05, T07, T09 and T17 also remain pending. No UI tests, deactivation persistence-failure rollback proof, concurrency proof, load test, or full-suite run is claimed at this trunk pause. Exact executed command results are reported with the trunk commit for review.
 
 ## **Trunk-first implementation order**
 

@@ -564,10 +564,10 @@ class EvaluationServiceTest {
         // Given
         given(this.sectionRepository.findById(anyInt())).willReturn(Optional.of(new Section("2023-2024", LocalDate.of(2023, 8, 14), LocalDate.of(2024, 4, 29), true, DayOfWeek.MONDAY, LocalTime.of(23, 59), DayOfWeek.TUESDAY, LocalTime.of(23, 59))));
         given(this.studentRepository.findBySectionSectionId(anyInt())).willReturn(this.students);
-        given(this.evaluationRepository.findByWeekAndEvaluateeId("2023-W31", 3)).willReturn(this.johnsEvaluations);
-        given(this.evaluationRepository.findByWeekAndEvaluateeId("2023-W31", 4)).willReturn(this.ericsW31Evaluations);
-        given(this.evaluationRepository.findByWeekAndEvaluateeId("2023-W31", 5)).willReturn(this.woodysEvaluations);
-        given(this.evaluationRepository.findByWeekAndEvaluateeId("2023-W31", 6)).willReturn(this.amandasEvaluations);
+        given(this.evaluationRepository.findByWeekAndEvaluateeSectionSectionId("2023-W31", 2))
+                .willReturn(java.util.stream.Stream.of(this.johnsEvaluations, this.ericsW31Evaluations,
+                        this.jerryEvaulaitons, this.woodysEvaluations, this.amandasEvaluations)
+                        .flatMap(List::stream).toList());
 
         // When
         WeeklyPeerEvaluationReport report = this.evaluationService.generateWeeklyPeerEvaluationReportForSection(2, "2023-W31");
@@ -588,8 +588,69 @@ class EvaluationServiceTest {
         assertThat(report.getPeerEvaluationAverages().get(0).getRatingAverages().get(4).getAverageScore()).isCloseTo(7.33, within(0.01));
         assertThat(report.getPeerEvaluationAverages().get(0).getRatingAverages().get(5).getAverageScore()).isCloseTo(7.33, within(0.01));
         assertThat(report.getPeerEvaluationAverages().get(1).getAverageTotalScore()).isCloseTo(50.0, within(0.01));
-        assertThat(report.getPeerEvaluationAverages().get(2).getAverageTotalScore()).isCloseTo(51.0, within(0.01));
-        assertThat(report.getPeerEvaluationAverages().get(3).getAverageTotalScore()).isCloseTo(52.0, within(0.01));
+        assertThat(report.getPeerEvaluationAverages().get(2).getAverageTotalScore()).isCloseTo(45.0, within(0.01));
+        // Recipient oracle from fixture ratings: Jerry (42 + 42 + 51) / 3, Woody 51, Amanda 52.
+        assertThat(report.getPeerEvaluationAverages().get(3).getAverageTotalScore()).isCloseTo(51.0, within(0.01));
+        assertThat(report.getPeerEvaluationAverages().get(4).getAverageTotalScore()).isCloseTo(52.0, within(0.01));
+    }
+
+    @Test
+    @org.junit.jupiter.api.Tag("UC-STU-deactivate-student") // T23, BR-evaluation-active-evaluatee
+    void inactiveEvaluateeCreateIsRefusedWithoutSaving() {
+        this.eric.setEnabled(false);
+        PeerEvaluation submission = new PeerEvaluation("2023-W31", this.john, this.eric, List.of(), "new public", "new private");
+
+        assertThatThrownBy(() -> this.evaluationService.addPeerEvaluation(submission))
+                .isInstanceOf(PeerEvaluationIllegalArgumentException.class)
+                .hasMessageContaining("inactive student Eric Wong");
+        verify(this.evaluationRepository, org.mockito.Mockito.never()).save(any());
+    }
+
+    @Test
+    @org.junit.jupiter.api.Tag("UC-STU-deactivate-student") // T24, BR-evaluation-active-evaluatee
+    void inactiveEvaluateeEditPreservesStoredRatingsAndComments() {
+        PeerEvaluation stored = this.ericsW31Evaluations.get(0);
+        stored.getEvaluatee().setEnabled(false);
+        List<Double> scores = stored.getRatings().stream().map(Rating::getActualScore).toList();
+        String publicComment = stored.getPublicComment();
+        String privateComment = stored.getPrivateComment();
+        double total = stored.getTotalScore();
+        given(this.evaluationRepository.findById(1)).willReturn(Optional.of(stored));
+        PeerEvaluation update = new PeerEvaluation("2023-W31", this.john, this.eric, List.of(), "changed", "changed");
+
+        assertThatThrownBy(() -> this.evaluationService.updatePeerEvaluation(1, update))
+                .isInstanceOf(PeerEvaluationIllegalArgumentException.class).hasMessageContaining("inactive student");
+
+        assertThat(stored.getRatings()).extracting(Rating::getActualScore).containsExactlyElementsOf(scores);
+        assertThat(stored.getPublicComment()).isEqualTo(publicComment);
+        assertThat(stored.getPrivateComment()).isEqualTo(privateComment);
+        assertThat(stored.getTotalScore()).isEqualTo(total);
+        verify(this.evaluationRepository, org.mockito.Mockito.never()).save(any());
+    }
+
+    @Test
+    @org.junit.jupiter.api.Tag("UC-STU-deactivate-student") // T27-T29, BR-evaluation-report-retention
+    void weeklyReportRetainsInactiveZeroScoreRecipientWithoutTeamAndOmitsEmptyInactiveRows() {
+        this.eric.setEnabled(false);
+        this.eric.setTeam(null);
+        this.woody.setEnabled(false); // no received record this week
+        this.john.setEnabled(false); // her contribution must still count
+        PeerEvaluation zero = new PeerEvaluation("2023-W31", this.john, this.eric,
+                List.of(new Rating(this.ericsW31Evaluations.get(0).getRatings().get(0).getCriterion(), 0.0)), "zero public", "zero private");
+        given(this.sectionRepository.findById(2)).willReturn(Optional.of(this.eric.getSection()));
+        given(this.studentRepository.findBySectionSectionId(2)).willReturn(this.students);
+        given(this.evaluationRepository.findByWeekAndEvaluateeSectionSectionId("2023-W31", 2)).willReturn(List.of(zero));
+
+        var rows = this.evaluationService.generateWeeklyPeerEvaluationReportForSection(2, "2023-W31").getPeerEvaluationAverages();
+
+        assertThat(rows).extracting(PeerEvaluationAverage::getStudentId).contains(4, 5, 7).doesNotContain(3, 6);
+        PeerEvaluationAverage retained = rows.stream().filter(row -> row.getStudentId().equals(4)).findFirst().orElseThrow();
+        assertThat(retained.getAverageTotalScore()).isZero();
+        assertThat(retained.getTeamName()).isNull();
+        assertThat(retained.getPublicComments()).containsExactly("zero public");
+        assertThat(retained.getPrivateComments()).containsExactly("zero private");
+        assertThat(retained.getRatingAverages()).extracting(RatingAverage::getAverageScore).containsExactly(0.0);
+        verify(this.evaluationRepository, org.mockito.Mockito.never()).findByWeekAndEvaluateeId(anyString(), anyInt());
     }
 
     @Test

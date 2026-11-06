@@ -6,7 +6,7 @@ import org.springframework.stereotype.Service;
 
 /**
  * Answers the questions a route asks about one named student: is that student the caller herself
- * ({@code isStudentSelf}), and is the caller an instructor of that student's course section
+ * ({@code isStudentSelf}), and is the caller an assigned instructor or owning course admin of that student's course section
  * ({@code isCurrentUserInstructorOfStudentSection}).
  *
  * <p>Every check fails closed: an id that names no row, or a link not yet established, is denied rather than
@@ -32,19 +32,28 @@ public class StudentSecurityService {
     }
 
     /**
-     * Check if the user is the instructor of the section that the student is in
+     * Check current assignment to the target course section or ownership of its course
      *
      * @param studentId the id of the student we need to access, this is NOT the current user's Id
      * @return
      */
     public boolean isCurrentUserInstructorOfStudentSection(Integer studentId) {
         Integer instructorIdFromJwt = this.userUtils.getUserId();
-        Student student = this.studentRepository.findById(studentId).orElse(null);
-        if (student == null) {
+        if (studentId == null || instructorIdFromJwt == null
+                || !(this.userUtils.hasRole("ROLE_instructor") || this.userUtils.hasRole("ROLE_admin"))) {
             return false;
         }
+        Student student = this.studentRepository.findById(studentId).orElse(null);
+        if (student == null || student.getSection() == null || student.getSection().getCourse() == null) {
+            return false;
+        }
+        var courseAdmin = student.getSection().getCourse().getCourseAdmin();
+        if (this.userUtils.hasRole("ROLE_admin") && courseAdmin != null
+                && instructorIdFromJwt.equals(courseAdmin.getId())) {
+            return true;
+        }
         return student.getSection().getInstructors().stream()
-                .anyMatch(instructor -> instructor.getId().equals(instructorIdFromJwt));
+                .anyMatch(instructor -> instructorIdFromJwt.equals(instructor.getId()));
     }
 
 }
