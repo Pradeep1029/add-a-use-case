@@ -1473,12 +1473,15 @@ Details:
 7. Use case ends.
 
 **Extensions:**
+- **1a. The caller is not authorized, or authorization has been lost before step 6:**
+  - 1a1. The system refuses the action under BR-student-lifecycle, BR-section-scoped-access, and BR-role-based-access without changing the student or her work.
+  - 1a2. Use case ends; being the student herself or an administrator of a different course grants no exception.
 - **6a. The selected student is already inactive, including a repeated confirmation:**
   - 6a1. The system reports that the student is already deactivated.
   - 6a2. The system leaves the account, memberships, and submitted work unchanged; use case ends.
 **Priority:** Low
 **Frequency of Use:** Rare. Occurs occasionally when a student withdraws from a course section.
-**Business Rules:** BR-student-lifecycle, BR-deactivation-team-retention, BR-submission-owed, BR-evaluation-active-evaluatee, BR-evaluation-report-retention
+**Business Rules:** BR-student-lifecycle, BR-section-scoped-access, BR-role-based-access, BR-deactivation-team-retention, BR-submission-owed, BR-evaluation-active-evaluatee, BR-evaluation-report-retention
 
 **Associated Information:**
 - FR-SEC-active-account applies to an already logged-in student: each protected request authenticated after the deactivation transaction commits checks the current account status, including requests bearing an unexpired token issued before deactivation. The use case does not recall responses already delivered or cancel requests authenticated before that commit.
