@@ -191,7 +191,7 @@ Extensions 1a, 2a, 5a, 6a, and 6b all have rows; Associated Information and new 
 
 ## **Implementation evidence**
 
-The shared trunk was committed separately and work stopped there. The developer then explicitly authorized continuing with endpoint/UI leaves; this records permission to proceed, not a claim that the developer explained or personally reviewed the code. The dedicated action, separate route-rule commit, warning, response reconciliation and active-evaluatee entry filtering are now implemented locally. The GitHub design merge gate and all remote assignment actions remain pending.
+The shared trunk was committed separately and work stopped there. The developer then explicitly authorized continuing with endpoint/UI leaves; this records permission to proceed, not a claim that the developer explained or personally reviewed the code. The dedicated action, separate route-rule commit, warning, response reconciliation and active-evaluatee entry filtering are now implemented locally. The design gate is merged in [design PR #2](https://github.com/Pradeep1029/add-a-use-case/pull/2), linked by Refs to [issue #1](https://github.com/Pradeep1029/add-a-use-case/issues/1). The fresh agent review found the overlapping-write defect and accepted its fix in 1fc79bf; this does not assert the student's personal review.
 
 Backend methods below are under `backend/src/test/java/team/projectpulse/`. New classes carry `@Tag("UC-STU-deactivate-student")`; additions to existing classes identify their row. The two UI specs under `frontend/cypress/e2e/` use **stubbed APIs**. A separate local smoke check used the actual frontend/backend/MySQL stack without API stubs; it exercised login, warning, confirmation, persisted enabled-only change, retained report data and denial of a previously issued student JWT.
 
@@ -230,7 +230,7 @@ The full backend suite passed **482 tests, zero failures/errors/skips** before t
 1. First commit the shared changes: live JWT account check, corrected student-scope predicate, profile-status preservation, inactive-evaluatee create/edit checks, and weekly report inclusion. Include their meaningful tests. **Stop for the developer to read that trunk commit before adding the action/UI.**
 2. Add the exact POST route rule and dedicated controller/service action, with authorization/idempotence/preservation tests.
 3. Add the warning/action/API wrapper, evaluation-entry filtering, and UI tests. Run regression checks, then perform a reversible one-line mutation against a selected test and restore production code.
-4. Trace actual evidence; prepare local review/PR text. A separate fresh-context review, the student's own review, design merge, GitHub issue/PR creation, inline comment, and submission remain pending. No remote actions are authorized.
+4. Trace actual evidence and publish the linked issue/PRs at the developer's request. The fresh-context agent review is complete and its finding is fixed in 1fc79bf. Keep the build PR open and unmerged; record personal review and submission only when those actions occur.
 
 ## **Architecture delta**
 
@@ -243,5 +243,5 @@ The Level-1 **Security** view currently says every token remains valid for its f
 - Reactivation is not built. Preserving status on generic profile saves removes the legacy switch's accidental reactivation capability; a future dedicated reactivation action must satisfy its own use case. A still-unexpired token can become usable again after later reactivation because this design checks account status, not token revocation generations.
 - A database read occurs per JWT-authenticated request. Do not claim a performance target was measured without running a load test.
 - Integration tests require Java 21 and Docker. Test execution evidence belongs in the build review and traceability, independently of this planned test list.
-- The design merge gate, personal review, inline GitHub comment, and submission are manual assignment steps, distinct from local preparation.
+- The design merge is recorded in PR #2. Mechanical publication may be delegated; agent review and an agent-attributed inline comment do not establish the student's personal review or understanding.
 
