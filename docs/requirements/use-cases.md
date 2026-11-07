@@ -1538,6 +1538,7 @@ Details:
 **Business Rules:** BR-student-lifecycle, BR-deactivation-team-retention, BR-submission-owed, BR-evaluation-submission-window
 
 **Associated Information:**
+- Reactivation requires the explicit confirmation in this use case; saving an ordinary student profile does not reactivate the account.
 - Membership on reactivation follows BR-deactivation-team-retention; submission obligations are recomputed under BR-submission-owed. Reactivation does not restore a former team assignment or reopen a closed peer evaluation submission window (BR-evaluation-submission-window).
 - The course admin or instructor shall be able to cancel the use case at any time prior to submitting it.
 

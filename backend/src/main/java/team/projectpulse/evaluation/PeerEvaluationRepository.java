@@ -13,6 +13,9 @@ public interface PeerEvaluationRepository extends JpaRepository<PeerEvaluation, 
 
     List<PeerEvaluation> findByWeekAndEvaluateeId(String week, Integer studentId);
 
+    // Scope by the recipient's course section, including history after team removal.
+    List<PeerEvaluation> findByWeekAndEvaluateeSectionSectionId(String week, Integer sectionId);
+
     Optional<PeerEvaluation> findByWeekAndEvaluatorIdAndEvaluateeId(String week, Integer evaluatorId, Integer evaluateeId);
 
     List<PeerEvaluation> findByWeekAndEvaluatorId(String week, Integer evaluatorId);
